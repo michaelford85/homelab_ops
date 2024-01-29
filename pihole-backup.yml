@@ -1,0 +1,34 @@
+---
+- name: Pi-hole Teleporter Backup and Move
+  hosts: pihole_server
+  gather_facts: false
+
+  vars_files:
+    - ["custom.config.yml", "default.config.yml"]
+  
+  
+  tasks:
+
+    - name: Retrieve the current time in order to timestamp files
+      ansible.builtin.setup:
+        gather_subset:
+        - date_time
+
+    - name: Execute Teleporter backup in Pi-hole container
+      ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole -a -t"
+      register: backup_output
+
+    - name: Locate and move the Teleporter backup file
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} sh -c 'mv $(find / -name \"pi-hole*.tar.gz\") /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz'"
+
+    - name: Copy backup file from Docker container to host
+      ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+
+    - name: Fetch backup file to local machine
+      ansible.builtin.fetch:
+        src: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
+        dest: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
+        flat: yes
+
+    - name: Copy backup file from Docker container to host
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} rm /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
