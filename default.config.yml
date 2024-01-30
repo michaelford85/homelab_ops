@@ -1,3 +1,4 @@
 ######## Pihole vars ########
 
 pihole_container_id: xxxxxxxxxxxx
+pihole_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"

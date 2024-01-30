@@ -2,3 +2,4 @@ collections/
 roles/
 inventory
 custom.config.yml
+service_account.json
