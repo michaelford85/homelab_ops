@@ -36,3 +36,9 @@
     - name: Upload file to Google Drive
       ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz\"  \"{{ pihole_backup_gdrive_folder_id }}\""
       delegate_to: localhost
+
+    - name: "Delete local copy of /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      ansible.builtin.file:
+        path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        state: absent
+      delegate_to: localhost

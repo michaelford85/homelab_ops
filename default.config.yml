@@ -2,3 +2,9 @@
 
 pihole_container_id: xxxxxxxxxxxx
 pihole_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+
+######## Home Assistant vars ########
+
+ha_container_id: xxxxxxxxxxxx
+ha_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"

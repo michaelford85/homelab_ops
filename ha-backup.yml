@@ -1,0 +1,128 @@
+---
+- name: Pi-hole Teleporter Backup and Move
+  hosts: ha_server
+  gather_facts: false
+
+  vars_files:
+    - ["custom.config.yml", "default.config.yml"]
+  
+  
+  tasks:
+
+    - name: Retrieve the current time in order to timestamp files
+      ansible.builtin.setup:
+        gather_subset:
+        - date_time
+
+
+    # $ rm -rf /tmp/ha_backup/
+    - name: Delete any existing /tmp/ha_backup directory
+      ansible.builtin.file:
+        path: /tmp/ha_backup/
+        state: absent
+    
+    # $ mkdir -p /tmp/ha_backup
+    - name: Create a new /tmp/ha_backup directory 
+      ansible.builtin.command:
+        cmd: mkdir -p /tmp/ha_backup
+
+    # $docker stop homeassistant
+    - name: Stop the Home Assistant container
+      community.docker.docker_container:
+        name: "{{ ha_container_id }}"
+        state: stopped
+
+    # docker cp homeassistant:/config /tmp/ha_backup/
+    - name: copy the Home Assistant config directory to /tmp/ha_backup
+      ansible.builtin.shell: "docker cp {{ ha_container_id }}:/config /tmp/ha_backup/"
+
+    # mv /tmp/ha_backup/config /tmp/ha_backup/data
+    - name: Rename the backup folder from config to data
+      ansible.builtin.shell: mv /tmp/ha_backup/config /tmp/ha_backup/data
+
+    # rm /tmp/ha_backup/data/backups/*
+    - name: remove the existing backup archives from /tmp/ha_backup/data/backups/
+      ansible.builtin.shell: rm /tmp/ha_backup/data/backups/*
+
+    # tar -czvf /tmp/homeassistant.tar.gz -C /tmp/ha_backup/ data
+    - name: Create /tmp/homeassistant.tar.gz
+      ansible.builtin.shell: tar -czvf /tmp/homeassistant.tar.gz -C /tmp/ha_backup/ data
+    
+    # tar -cvf /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar /tmp/homeassistant.tar.gz 
+    - name: "Create /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar"
+      ansible.builtin.shell: "tar -cvf /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar -C /tmp/ homeassistant.tar.gz"
+    
+    # fetch /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+    - name: "fetch /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar"
+      ansible.builtin.fetch:
+        src: /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+        dest: /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+        flat: yes
+      
+    # upload /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar to Google Drive
+    - name: "Upload /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar to Google Drive"
+      ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar\"  \"{{ ha_backup_gdrive_folder_id }}\""
+      delegate_to: localhost
+
+    - name: "Delete local copy of /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar"
+      ansible.builtin.file:
+        path: "/tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar"
+        state: absent
+      delegate_to: localhost
+
+    # rm -rf /tmp/ha_backup
+    - name: rm -rf /tmp/ha_backup
+      ansible.builtin.file:
+        path: /tmp/ha_backup
+        state: absent 
+
+    # rm homeassistant.tar.gz
+    - name: rm /tmp/homeassistant.tar.gz
+      ansible.builtin.file:
+        path: /tmp/homeassistant.tar.gz
+        state: absent
+   
+    # rm /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+    - name: rm /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+      ansible.builtin.file:
+        path: /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+        state: absent
+
+     # rm /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+    - name: /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+      ansible.builtin.file:
+        path: /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar
+        state: absent
+      delegate_to: localhost
+
+
+    # $docker start homeassistant
+    - name: Start the Home Assistant container
+      community.docker.docker_container:
+        name: "{{ ha_container_id }}"
+        state: started
+
+
+
+    # - name: Execute Teleporter backup in Pi-hole container
+    #   ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole -a -t"
+    #   register: backup_output
+
+    # - name: Locate and move the Teleporter backup file
+    #   ansible.builtin.shell: "docker exec {{ pihole_container_id }} sh -c 'mv $(find / -name \"pi-hole*.tar.gz\") /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz'"
+
+    # - name: Copy backup file from Docker container to host
+    #   ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+
+    # - name: Fetch backup file to local machine
+    #   ansible.builtin.fetch:
+    #     src: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
+    #     dest: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
+    #     flat: yes
+
+    # - name: Copy backup file from Docker container to host
+    #   ansible.builtin.shell: "docker exec {{ pihole_container_id }} rm /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+
+    # - name: Upload file to Google Drive
+    #   ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz\"  \"{{ pihole_backup_gdrive_folder_id }}\""
+    #   delegate_to: localhost
