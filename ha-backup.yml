@@ -101,28 +101,3 @@
       community.docker.docker_container:
         name: "{{ ha_container_id }}"
         state: started
-
-
-
-    # - name: Execute Teleporter backup in Pi-hole container
-    #   ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole -a -t"
-    #   register: backup_output
-
-    # - name: Locate and move the Teleporter backup file
-    #   ansible.builtin.shell: "docker exec {{ pihole_container_id }} sh -c 'mv $(find / -name \"pi-hole*.tar.gz\") /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz'"
-
-    # - name: Copy backup file from Docker container to host
-    #   ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
-
-    # - name: Fetch backup file to local machine
-    #   ansible.builtin.fetch:
-    #     src: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
-    #     dest: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
-    #     flat: yes
-
-    # - name: Copy backup file from Docker container to host
-    #   ansible.builtin.shell: "docker exec {{ pihole_container_id }} rm /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
-
-    # - name: Upload file to Google Drive
-    #   ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz\"  \"{{ pihole_backup_gdrive_folder_id }}\""
-    #   delegate_to: localhost
