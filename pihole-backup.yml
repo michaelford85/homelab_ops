@@ -42,3 +42,8 @@
         path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
         state: absent
       delegate_to: localhost
+
+    - name: "Delete remote copy of /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      ansible.builtin.file:
+        path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        state: absent
