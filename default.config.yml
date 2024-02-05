@@ -8,3 +8,9 @@ pihole_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 ha_container_id: xxxxxxxxxxxx
 ha_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+######## Unifi vars ########
+
+unifi_container_id: xxxxxxxxxxxx
+unifi_container_autobackup_dir: "/unifi/data/backup/autobackup"
+unifi_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
