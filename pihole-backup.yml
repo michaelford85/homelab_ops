@@ -19,7 +19,7 @@
       register: backup_output
 
     - name: Locate and move the Teleporter backup file
-      ansible.builtin.shell: "docker exec {{ pihole_container_id }} sh -c 'mv $(find / -name \"pi-hole*.tar.gz\") /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz'"
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} sh -c 'sudo mv $(find / -name \"pi-hole*.tar.gz\") /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz'"
 
     - name: Copy backup file from Docker container to host
       ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
