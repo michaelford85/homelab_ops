@@ -1,0 +1,34 @@
+---
+- name: Edge Router Backup
+  hosts: edge_router
+  gather_facts: false
+
+  vars_files:
+    - ["custom.config.yml", "default.config.yml"]
+  
+  
+  tasks:
+
+    - name: Retrieve the current time in order to timestamp files
+      ansible.builtin.setup:
+        gather_subset:
+        - date_time
+      delegate_to: localhost
+
+    - name: "Transfer {{ router_remote_file }} from router, using SCP with password"
+      ansible.builtin.expect:
+        command: "scp {{ ansible_user }}@{{ ansible_host }}:{{ router_remote_file }} /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
+        responses:
+          password: "{{ ansible_ssh_pass }}"
+      delegate_to: localhost
+
+    # upload /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar to Google Drive
+    - name: "Upload /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }} to Google Drive"
+      ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}\"  \"{{ router_backup_gdrive_folder_id }}\""
+      delegate_to: localhost
+
+    - name: "Remove local /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
+      ansible.builtin.file:
+        path: "/tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
+        state: absent
+      delegate_to: localhost

@@ -9,6 +9,7 @@ source ~/venvs/ansible_core_0214/bin/activate
 cd ~/git-workspace/homelab_ops/
 
 # Step 3: Run 2 Ansible playbooks from within the directory
+ansible-playbook router-backup.yml
 ansible-playbook pihole-backup.yml
 ansible-playbook unifi-backup.yml
 ansible-playbook ha-backup.yml
