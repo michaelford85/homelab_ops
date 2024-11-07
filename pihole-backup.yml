@@ -6,44 +6,72 @@
   vars_files:
     - ["custom.config.yml", "default.config.yml"]
   
-  
   tasks:
 
     - name: Retrieve the current time in order to timestamp files
       ansible.builtin.setup:
         gather_subset:
-        - date_time
+          - date_time
+
+    - name: Remove existing Teleporter backup files
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} find / -path /proc -prune -o -name 'pi-hole-pihole_testbed-teleporter_*.tar.gz' -exec rm -f {} +"
+      ignore_errors: true  # Ignore errors if no files are found or due to permission issues
 
     - name: Execute Teleporter backup in Pi-hole container
       ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole -a -t"
       register: backup_output
+      async: 300
+      poll: 5
 
-    - name: Locate and move the Teleporter backup file
-      ansible.builtin.shell: "docker exec {{ pihole_container_id }} sh -c 'sudo mv $(find / -name \"pi-hole*.tar.gz\") /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz'"
+    - name: Locate the latest Teleporter backup file
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} find / -path /proc -prune -o -name 'pi-hole*.tar.gz' -type f -printf '%T@ %p\n' | sort -n | tail -1 | awk '{print $2}'"
+      register: backup_file_location
+      changed_when: false
+      failed_when: backup_file_location.rc != 0 and backup_file_location.stdout == ""
+
+    - name: Set stripped backup file path
+      ansible.builtin.set_fact:
+        stripped_backup_file_path: "{{ backup_file_location.stdout | regex_replace('^/', '') }}"
+
+    - name: Debug stripped backup file path
+      ansible.builtin.debug:
+        msg: "The stripped backup file path is {{ stripped_backup_file_path }}"
+
+    - name: Move the Teleporter backup file to a known location
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} mv {{ stripped_backup_file_path }} /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      async: 300
+      poll: 5
 
     - name: Copy backup file from Docker container to host
       ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      async: 300
+      poll: 5
 
     - name: Fetch backup file to local machine
       ansible.builtin.fetch:
         src: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
         dest: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
         flat: yes
+      timeout: 600
 
-    - name: Copy backup file from Docker container to host
+    - name: Remove backup file from Docker container
       ansible.builtin.shell: "docker exec {{ pihole_container_id }} rm /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      async: 300
+      poll: 5
 
     - name: Upload file to Google Drive
-      ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz\"  \"{{ pihole_backup_gdrive_folder_id }}\""
+      ansible.builtin.shell: "python {{ playbook_dir }}/upload_script.py \"/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz\"  \"{{ pihole_backup_gdrive_folder_id }}\""
       delegate_to: localhost
+      # async: 600
+      # poll: 10
 
-    - name: "Delete local copy of /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+    - name: Delete local copy of the backup
       ansible.builtin.file:
         path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
         state: absent
       delegate_to: localhost
 
-    - name: "Delete remote copy of /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+    - name: Delete remote copy of the backup
       ansible.builtin.file:
         path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
         state: absent

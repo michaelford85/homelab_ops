@@ -1,5 +1,5 @@
 ---
-- name: Pi-hole Teleporter Backup and Move
+- name: Home Assistant Backup and Move
   hosts: ha_server
   gather_facts: false
 
@@ -43,6 +43,7 @@
     # rm /tmp/ha_backup/data/backups/*
     - name: remove the existing backup archives from /tmp/ha_backup/data/backups/
       ansible.builtin.shell: rm /tmp/ha_backup/data/backups/*
+      ignore_errors: yes
 
     # tar -czvf /tmp/homeassistant.tar.gz -C /tmp/ha_backup/ data
     - name: Create /tmp/homeassistant.tar.gz

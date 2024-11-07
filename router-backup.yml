@@ -17,7 +17,7 @@
 
     - name: "Transfer {{ router_remote_file }} from router, using SCP with password"
       ansible.builtin.expect:
-        command: "scp {{ ansible_user }}@{{ ansible_host }}:{{ router_remote_file }} /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
+        command: "scp -o StrictHostKeyChecking=no {{ ansible_user }}@{{ ansible_host }}:{{ router_remote_file }} /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
         responses:
           password: "{{ ansible_ssh_pass }}"
       delegate_to: localhost
