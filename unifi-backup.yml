@@ -6,24 +6,28 @@
   vars_files:
     - ["custom.config.yml", "default.config.yml"]
   
-  
   tasks:
 
     - name: Retrieve the current time in order to timestamp files
       ansible.builtin.setup:
         gather_subset:
-        - date_time
+          - date_time
       delegate_to: localhost
 
     - name: Find the most recently created .unf file in the unifi container
       ansible.builtin.shell: >
-        docker exec {{ unifi_container_id }} /bin/bash -c 'find {{ unifi_container_autobackup_dir }} -type f -name "*.unf" -printf "%T@ %p\n" | sort -n | tail -1 | cut -f2- -d" "'
+        docker exec {{ unifi_container_id }} /bin/bash -c 'find {{ unifi_container_autobackup_dir }} -type f -name "*.unf" -printf "%T@ %p\n" | sort -n | tail -1 | cut -f2- -d" " || echo "No .unf files found"'
       register: recent_file
+      changed_when: false
+
+    - name: Debug recent file path
+      ansible.builtin.debug:
+        msg: "The most recent backup file path is {{ recent_file.stdout }}"
 
     - name: Copy backup file from Docker container to host
       ansible.builtin.shell: >
         docker cp {{ unifi_container_id }}:"{{ recent_file.stdout }}" /tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf
-      
+
     - name: Fetch backup file to local machine
       ansible.builtin.fetch:
         src: /tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf
@@ -31,16 +35,16 @@
         flat: yes
 
     - name: Upload file to Google Drive
-      ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf\"  \"{{ unifi_backup_gdrive_folder_id }}\""
+      ansible.builtin.shell: "python {{ playbook_dir }}/upload_script.py \"/tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf\"  \"{{ unifi_backup_gdrive_folder_id }}\""
       delegate_to: localhost
 
-    - name: "Delete local copy of /tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf"
+    - name: Delete local copy of the backup
       ansible.builtin.file:
         path: "/tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf"
         state: absent
       delegate_to: localhost
 
-    - name: "Delete remote copy of /tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf"
+    - name: Delete remote copy of the backup
       ansible.builtin.file:
         path: "/tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf"
         state: absent
