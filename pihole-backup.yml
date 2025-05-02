@@ -5,6 +5,7 @@
 
   vars_files:
     - ["custom.config.yml", "default.config.yml"]
+    - ./credentials/nas1.yml
   
   tasks:
 
@@ -59,11 +60,14 @@
       async: 300
       poll: 5
 
-    - name: Upload file to Google Drive
-      ansible.builtin.shell: "python {{ playbook_dir }}/upload_script.py \"/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz\"  \"{{ pihole_backup_gdrive_folder_id }}\""
+    - name: Upload Pihole backup to Synology NAS via SCP
+      ansible.builtin.shell: >
+        scp -O -i {{ nas1_private_key }}
+        "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_pihole_directory }}/
       delegate_to: localhost
-      # async: 600
-      # poll: 10
+      register: scp_result
+      failed_when: scp_result.rc != 0
 
     - name: Delete local copy of the backup
       ansible.builtin.file:

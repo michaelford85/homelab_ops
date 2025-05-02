@@ -14,3 +14,12 @@ ha_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 unifi_container_id: xxxxxxxxxxxx
 unifi_container_autobackup_dir: "/unifi/data/backup/autobackup"
 unifi_backup_gdrive_folder_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+######## NAS1 vars ########
+
+nas1_unifi_directory: /volume1/homelab/unifi_backups
+nas1_pihole_directory: /volume1/homelab/pihole_backups
+nas1_router_directory: /volume1/homelab/router_backups
+nas1_hostname: 10.0.1.20
+nas1_username: xxxxxxxxxxxx
+nas1_private_key: "~/.ssh/fordlab.pem"
