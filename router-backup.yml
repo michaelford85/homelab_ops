@@ -5,6 +5,7 @@
 
   vars_files:
     - ["custom.config.yml", "default.config.yml"]
+    - ./credentials/nas1.yml
   
   
   tasks:
@@ -21,11 +22,15 @@
         responses:
           password: "{{ ansible_ssh_pass }}"
       delegate_to: localhost
-
-    # upload /tmp/ha_config_backup.{{ ansible_date_time.iso8601_basic_short }}.tar to Google Drive
-    - name: "Upload /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }} to Google Drive"
-      ansible.builtin.shell: "python {{playbook_dir}}/upload_script.py \"/tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}\"  \"{{ router_backup_gdrive_folder_id }}\""
+      
+    - name: Upload Edge Router backup to Synology NAS via SCP
+      ansible.builtin.shell: >
+        scp -O -i {{ nas1_private_key }}
+        /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}
+        {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_router_directory }}/
       delegate_to: localhost
+      register: scp_result
+      failed_when: scp_result.rc != 0
 
     - name: "Remove local /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
       ansible.builtin.file:
