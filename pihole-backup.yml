@@ -15,55 +15,50 @@
           - date_time
 
     - name: Remove existing Teleporter backup files
-      ansible.builtin.shell: "docker exec {{ pihole_container_id }} find / -path /proc -prune -o -name 'pi-hole-pihole_testbed-teleporter_*.tar.gz' -exec rm -f {} +"
+      ansible.builtin.shell: 'docker exec {{ pihole_container_id }} find / -type f -name "pi-hole_*.zip" -exec rm -f {} \; 2>/dev/null'
       ignore_errors: true  # Ignore errors if no files are found or due to permission issues
 
     - name: Execute Teleporter backup in Pi-hole container
-      ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole -a -t"
+      ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole-FTL --teleporter"
       register: backup_output
       async: 300
       poll: 5
 
     - name: Locate the latest Teleporter backup file
-      ansible.builtin.shell: "docker exec {{ pihole_container_id }} find / -path /proc -prune -o -name 'pi-hole*.tar.gz' -type f -printf '%T@ %p\n' | sort -n | tail -1 | awk '{print $2}'"
+      ansible.builtin.shell: 'docker exec {{ pihole_container_id }} find / -type f -name "pi-hole_*.zip" 2>/dev/null'
       register: backup_file_location
       changed_when: false
       failed_when: backup_file_location.rc != 0 and backup_file_location.stdout == ""
 
-    - name: Set stripped backup file path
+    - name: Set backup filename without leading slash
       ansible.builtin.set_fact:
-        stripped_backup_file_path: "{{ backup_file_location.stdout | regex_replace('^/', '') }}"
+        backup_file_no_leading_slash: "{{ backup_file_location.stdout | regex_replace('^/', '') }}"
 
-    - name: Debug stripped backup file path
+    - name: Debug backup file path without leading slash
       ansible.builtin.debug:
-        msg: "The stripped backup file path is {{ stripped_backup_file_path }}"
-
-    - name: Move the Teleporter backup file to a known location
-      ansible.builtin.shell: "docker exec {{ pihole_container_id }} mv {{ stripped_backup_file_path }} /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
-      async: 300
-      poll: 5
+        msg: "Cleaned backup file path: {{ backup_file_no_leading_slash }}"
 
     - name: Copy backup file from Docker container to host
-      ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      ansible.builtin.shell: "docker cp {{ pihole_container_id }}:/{{ backup_file_no_leading_slash  }} /tmp/{{ backup_file_no_leading_slash  }}"
       async: 300
       poll: 5
 
     - name: Fetch backup file to local machine
       ansible.builtin.fetch:
-        src: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
-        dest: /tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz
+        src: /tmp/{{ backup_file_no_leading_slash  }}
+        dest: /tmp/{{ backup_file_no_leading_slash  }}
         flat: yes
       timeout: 600
 
     - name: Remove backup file from Docker container
-      ansible.builtin.shell: "docker exec {{ pihole_container_id }} rm /pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      ansible.builtin.shell: "docker exec {{ pihole_container_id }} rm /{{ backup_file_no_leading_slash  }}"
       async: 300
       poll: 5
 
     - name: Upload Pihole backup to Synology NAS via SCP
       ansible.builtin.shell: >
         scp -O -i {{ nas1_private_key }}
-        "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        "/tmp/{{ backup_file_no_leading_slash  }}"
         {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_pihole_directory }}/
       delegate_to: localhost
       register: scp_result
@@ -71,11 +66,11 @@
 
     - name: Delete local copy of the backup
       ansible.builtin.file:
-        path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        path: "/tmp/{{ backup_file_no_leading_slash  }}"
         state: absent
       delegate_to: localhost
 
     - name: Delete remote copy of the backup
       ansible.builtin.file:
-        path: "/tmp/pihole_teleporter_backup.{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        path: "/tmp/{{ backup_file_no_leading_slash  }}"
         state: absent
