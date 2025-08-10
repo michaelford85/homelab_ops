@@ -1,0 +1,57 @@
+---
+- name: Full update of Ubuntu on Raspberry Pi
+  hosts: office_pis
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    # Keep it non-interactive to avoid prompts during dist-upgrade
+    apt_env:
+      DEBIAN_FRONTEND: noninteractive
+    # How long to wait for the Pi to come back after reboot
+    reboot_timeout_seconds: 600
+
+  pre_tasks:
+    - name: Ensure we can reach the host
+      ansible.builtin.ping:
+
+  tasks:
+    - name: Refresh apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      environment: "{{ apt_env }}"
+
+    - name: Full upgrade (kernel/firmware allowed to change)
+      ansible.builtin.apt:
+        upgrade: dist          # same idea as `apt full-upgrade`
+      environment: "{{ apt_env }}"
+
+    - name: Autoremove unused packages
+      ansible.builtin.apt:
+        autoremove: yes
+        purge: yes
+      environment: "{{ apt_env }}"
+
+    - name: Clean apt caches
+      ansible.builtin.apt:
+        autoclean: yes
+        clean: yes
+      environment: "{{ apt_env }}"
+
+    - name: Reboot if needed (e.g., kernel updated)
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ reboot_timeout_seconds }}"
+      when: ansible_facts.packages is not defined
+            or ('linux-raspi' in (ansible_facts.packages.keys() | list) )
+            or (ansible_facts['os_family'] == 'Debian')  # safe default
+
+    - name: Show kernel version after reboot
+      ansible.builtin.command: uname -a
+      register: uname_out
+      changed_when: false
+
+    - name: Print kernel info
+      ansible.builtin.debug:
+        msg: "{{ uname_out.stdout }}"
