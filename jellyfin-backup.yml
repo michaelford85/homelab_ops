@@ -1,0 +1,87 @@
+---
+- name: Jellyfin Backup and Move
+  hosts: jellyfin_server
+  gather_facts: false
+
+  vars_files:
+    - ["custom.config.yml", "default.config.yml"]
+  
+  tasks:
+   
+    - name: Retrieve the current time in order to timestamp files
+      ansible.builtin.setup:
+        gather_subset:
+          - date_time
+
+    - name: Inspect Jellyfin container
+      community.docker.docker_container_info:
+        name: jellyfin
+      register: jellyfin
+
+    - name: Extract Jellyfin version from OCI label
+      set_fact:
+        jellyfin_version: >-
+          {{ jellyfin.container.Config.Labels['org.opencontainers.image.version'] }}
+
+    - name: Show Jellyfin version
+      debug:
+        msg: "Jellyfin version: {{ jellyfin_version }}"
+    
+    - name: Stop the Jellyfin container
+      community.docker.docker_container:
+        name: "{{ jellyfin_container_id }}"
+        state: stopped
+
+
+    - name: Create a timestamped folder for jellyfin backups
+      ansible.builtin.file: 
+        path: "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}"
+        state: directory
+
+    - name: Copy the config, data and root directories from the container to the backup folder 
+      ansible.posix.synchronize:
+        src: "/home/ford/docker/jellyfin/config/{{ item }}/"
+        dest: "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}/{{ item }}"
+        mode: pull
+        delete: false
+        archive: true
+      with_items:
+        - config
+        - data
+        - root
+
+    - name: Start the Jellyfin container
+      community.docker.docker_container:
+        name: "{{ jellyfin_container_id }}"
+        state: started
+
+    - name: "Create a zip archive of /tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}"
+      community.general.archive:
+        path: "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}"
+        dest: "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}.zip"
+        format: zip
+      delegate_to: localhost
+  
+    - name: Upload jellyfin backup to Synology NAS via SCP
+      ansible.builtin.shell: >
+        scp -O -i {{ ansible_env.HOME }}/{{ nas1_private_key }}
+        "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}.zip"
+        {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_jellyfin_directory }}/
+      delegate_to: localhost
+      register: scp_result
+      failed_when: scp_result.rc != 0
+
+    - name: Delete local copy of the backup
+      ansible.builtin.file:
+        path: "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}.zip"
+        state: absent
+      delegate_to: localhost
+
+
+    - name: Delete local directory of the backup
+      ansible.builtin.file:
+        path: "/tmp/jellyfin.{{ ansible_date_time.iso8601_basic_short }}.{{ jellyfin_version }}"
+        state: absent
+      delegate_to: localhost
+
+    
