@@ -22,15 +22,13 @@
         responses:
           password: "{{ ansible_ssh_pass }}"
       delegate_to: localhost
-      
-    - name: Upload Edge Router backup to Synology NAS via SCP
+
+    - name: Upload UniFi backup to Synology NAS via SCP
       ansible.builtin.shell: >
-        scp -O -i {{ nas1_private_key }}
-        /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}
+        scp -O -i {{ ansible_env.HOME }}/{{ nas1_private_key }}
+        "/tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
         {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_router_directory }}/
       delegate_to: localhost
-      register: scp_result
-      failed_when: scp_result.rc != 0
 
     - name: "Remove local /tmp/config.boot.{{ ansible_date_time.iso8601_basic_short }}"
       ansible.builtin.file:

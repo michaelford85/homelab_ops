@@ -1,6 +1,7 @@
 collections/
 roles/
-inventory
+pihole/pihole_update_ansible.log
+*inventory
 custom.config.yml
 service_account.json
 ansible.log
