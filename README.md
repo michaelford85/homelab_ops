@@ -62,6 +62,7 @@ If you want to run in a scheduled fashion, you can use CRON by editing your cron
 
 ```bash
 crontab -e
+```
 
 Note: cron does not set a working directory like an interactive shell does.
 If your scripts or playbooks rely on relative paths, you must cd into the repo first (or make the script cd into its own directory internally).
@@ -69,14 +70,22 @@ If your scripts or playbooks rely on relative paths, you must cd into the repo f
 Example crontab entries:
 
 ```
+# Use bash for consistency (cron defaults to /bin/sh)
 SHELL=/bin/bash
 
+# (Optional) Set a predictable PATH for cron
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# Run the back_up_configs.sh script every Monday at 2:30 AM.
+# NOTE: We cd into the repo so ansible/playbook relative paths resolve correctly.
 30 2 * * 1 cd /home/ford/git-workspace/homelab_ops && /bin/bash ./back_up_configs.sh >> /home/ford/git-workspace/homelab_ops/backup_logs/backup_$(date +\%Y-\%m-\%d_\%H-\%M-\%S).log 2>&1
 
+# Update Gravity on pihole_server every day at 4:00 AM.
+# Appends to a rolling log file (not timestamped).
 0 4 * * * export ANSIBLE_CONFIG=/home/ford/git-workspace/homelab_ops/pihole/ansible.cfg && /home/ford/.venvs/ansible/bin/ansible-playbook -i /home/ford/git-workspace/homelab_ops/pihole/inventory /home/ford/git-workspace/homelab_ops/pihole/update-pihole.yml --limit pihole_server -v >> /home/ford/git-workspace/homelab_ops/pihole/pihole_update_ansible.log 2>&1
 
+# Update Gravity on pihole2_server every day at 5:00 AM.
+# Appends to the same rolling log file.
 0 5 * * * export ANSIBLE_CONFIG=/home/ford/git-workspace/homelab_ops/pihole/ansible.cfg && /home/ford/.venvs/ansible/bin/ansible-playbook -i /home/ford/git-workspace/homelab_ops/pihole/inventory /home/ford/git-workspace/homelab_ops/pihole/update-pihole.yml --limit pihole2_server -v >> /home/ford/git-workspace/homelab_ops/pihole/pihole_update_ansible.log 2>&1
 ```
 
