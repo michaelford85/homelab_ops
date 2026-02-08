@@ -19,10 +19,10 @@ source ~/.venvs/ansible/bin/activate
 cd /home/ford/git-workspace/homelab_ops
 
 # Step 3: Run 2 Ansible playbooks from within the directory
-ansible-playbook -T 600 router-backup.yml -v
-ansible-playbook -T 600 pihole-backup.yml -v
-ansible-playbook -T 600 unifi-backup.yml -v
-ansible-playbook -T 600 jellyfin-backup.yml -v
+ansible-playbook -T 600 pihole-backup.yml -vv
+ansible-playbook -T 600 router-backup.yml -vv
+ansible-playbook -T 600 unifi-backup.yml -vv
+ansible-playbook -T 600 jellyfin-backup.yml -vv
 # Step 4: Deactivate the virtual environment at the end
 deactivate
 

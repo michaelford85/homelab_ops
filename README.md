@@ -24,6 +24,9 @@ homelab_ops/
 ├── collections/
 ├── pihole/
 │   └── update-pihole.yml
+├── os_updates/
+│   ├── office-pis-update-ubuntu.yml
+│   └── infra01-update-ubuntu.yml
 ├── ansible.cfg
 ├── inventory
 ├── requirements.yml
@@ -32,7 +35,6 @@ homelab_ops/
 ├── pihole-backup.yml
 ├── router-backup.yml
 ├── unifi-backup.yml
-├── office-pis-update-ubuntu.yml
 ├── raspbian-upgrade.yml
 ├── default.config.yml
 ├── custom.config.yml
@@ -42,6 +44,21 @@ homelab_ops/
 ---
 
 ## Typical usage
+
+### Homelab OS Updates
+
+The raspberry Pis runnunt Ubuntu in my office are upgraded with the following command:
+
+```bash
+ansible-playbook os_updates/office-pis-update-ubuntu.yml
+```
+
+The infra01 main homelab server is upgraded with the following:
+
+```bash
+ansible-playbook os_updates/infra01-update-ubuntu.yml -K 
+```
+> -K tells the playbook to prompt for the sudo password
 
 ### Ad-hoc usage
 

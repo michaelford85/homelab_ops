@@ -12,6 +12,7 @@
       ansible.builtin.setup:
         gather_subset:
           - date_time
+      delegate_to: localhost
 
     - name: Remove existing Teleporter backup files
       ansible.builtin.shell: 'docker exec {{ pihole_container_id }} find / -type f -name "pi-hole_*.zip" -exec rm -f {} \; 2>/dev/null'
@@ -59,9 +60,9 @@
         scp -O -i {{ ansible_env.HOME }}/{{ nas1_private_key }}
         "/tmp/{{ backup_file_no_leading_slash  }}"
         {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_pihole_directory }}/
-      delegate_to: localhost
       register: scp_result
       failed_when: scp_result.rc != 0
+      delegate_to: localhost
 
     - name: Delete local copy of the backup
       ansible.builtin.file:
