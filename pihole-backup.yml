@@ -56,7 +56,7 @@
 
     - name: Upload Pihole backup to Synology NAS via SCP
       ansible.builtin.shell: >
-        scp -O -i {{ nas1_private_key }}
+        scp -O -i {{ ansible_env.HOME }}/{{ nas1_private_key }}
         "/tmp/{{ backup_file_no_leading_slash  }}"
         {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_pihole_directory }}/
       delegate_to: localhost
