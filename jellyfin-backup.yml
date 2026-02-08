@@ -12,6 +12,7 @@
       ansible.builtin.setup:
         gather_subset:
           - date_time
+      delegate_to: localhost
 
     - name: Inspect Jellyfin container
       community.docker.docker_container_info:
