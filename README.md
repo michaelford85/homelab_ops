@@ -47,7 +47,7 @@ homelab_ops/
 
 ### Homelab OS Updates
 
-The raspberry Pis runnunt Ubuntu in my office are upgraded with the following command:
+The raspberry Pis running Ubuntu in my office are upgraded with the following command:
 
 ```bash
 ansible-playbook os_updates/office-pis-update-ubuntu.yml
