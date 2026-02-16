@@ -18,11 +18,16 @@
       ansible.builtin.shell: 'docker exec {{ pihole_container_id }} find / -type f -name "pi-hole_*.zip" -exec rm -f {} \; 2>/dev/null'
       ignore_errors: true  # Ignore errors if no files are found or due to permission issues
 
+    # - name: Execute Teleporter backup in Pi-hole container
+    #   ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole-FTL --teleporter"
+    #   register: backup_output
+    #   async: 300
+    #   poll: 5
     - name: Execute Teleporter backup in Pi-hole container
-      ansible.builtin.shell: "docker exec -w / {{ pihole_container_id }} pihole-FTL --teleporter"
+      ansible.builtin.shell: >
+        docker exec -w / {{ pihole_container_id }} pihole-FTL --teleporter
       register: backup_output
-      async: 300
-      poll: 5
+      changed_when: true
 
     - name: Locate the latest Teleporter backup file
       ansible.builtin.shell: 'docker exec {{ pihole_container_id }} find / -type f -name "pi-hole_*.zip" 2>/dev/null'
