@@ -37,7 +37,7 @@
 
     - name: Upload UniFi backup to Synology NAS via SCP
       ansible.builtin.shell: >
-        scp -O -i {{ nas1_private_key }}
+        scp -O -i {{ ansible_env.HOME }}/{{ nas1_private_key }}
         "/tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf"
         {{ nas1_username }}@{{ nas1_hostname }}:{{ nas1_unifi_directory }}/
       delegate_to: localhost
@@ -54,3 +54,4 @@
       ansible.builtin.file:
         path: "/tmp/unifi_controller_backup.{{ ansible_date_time.iso8601_basic_short }}.unf"
         state: absent
+      delegate_to: localhost

@@ -1,0 +1,33 @@
+---
+- hosts: all
+  gather_facts: false
+
+  vars:
+    container: "pihole"
+
+  tasks:
+    
+    - name: Restart Pi-hole container
+      community.docker.docker_container:
+        name: pihole
+        restart: true
+        state: started
+    
+    - name: Update gravity lists
+      community.docker.docker_container_exec:
+        container: "{{ container }}"
+        command: "pihole updateGravity"
+
+    - name: Flush long-term query DB (recreate FTL DB)
+      community.docker.docker_container_exec:
+        container: "{{ container }}"
+        command: >
+          sh -c "
+          rm -f /etc/pihole/pihole-FTL.db &&
+          kill -TERM 1
+          "
+
+    - name: Reload DNS
+      community.docker.docker_container_exec:
+        container: "{{ container }}"
+        command: "pihole reloaddns"

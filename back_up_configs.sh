@@ -1,17 +1,41 @@
-# location on ansible controller: ~/homelab-ops/back_up_configs.sh
+#!/usr/bin/env bash
+set -u -o pipefail  # note: no -e
 
-#!/bin/bash
+LOG_DIR="/home/ford/git-workspace/homelab_ops/backup_logs"
+TIMESTAMP="$(date +'%Y-%m-%d_%H-%M-%S')"
+LOG_FILE="${LOG_DIR}/backup_${TIMESTAMP}.log"
 
-# Step 1: Source into a particular Python virtual environment
-source ~/venvs/ansible/bin/activate
+mkdir -p "$LOG_DIR"
+exec >>"$LOG_FILE" 2>&1
 
-# Step 2: Change into a directory
-cd ~/git-workspace/homelab_ops/
+echo "==== Backup started at $(date) ===="
 
-# Step 3: Run 2 Ansible playbooks from within the directory
-ansible-playbook -T 600 router-backup.yml -v
-ansible-playbook -T 600 pihole-backup.yml -v
-ansible-playbook -T 600 unifi-backup.yml -v
+source ~/.venvs/ansible/bin/activate
+cd /home/ford/git-workspace/homelab_ops
 
-# Step 4: Deactivate the virtual environment at the end
-deactivate
+fail=0
+
+run_pb() {
+  local name="$1"
+  shift
+  echo
+  echo "---- Running: $name ----"
+  "$@"
+  local rc=$?
+  if (( rc != 0 )); then
+    echo "!!!! FAILED: $name (rc=$rc) — continuing"
+    fail=1
+  else
+    echo "OK: $name"
+  fi
+}
+
+run_pb "pihole-backup"   ansible-playbook -T 600 pihole-backup.yml -vv
+run_pb "router-backup"   ansible-playbook -T 600 router-backup.yml -vv
+run_pb "unifi-backup"    ansible-playbook -T 600 unifi-backup.yml -vv
+run_pb "jellyfin-backup" ansible-playbook -T 600 jellyfin-backup.yml -vv
+
+deactivate || true
+echo "==== Backup finished at $(date) ===="
+
+exit "$fail"

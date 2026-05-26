@@ -1,0 +1,89 @@
+---
+- name: Full update of Ubuntu 22.04 on MiniForum MS-01 (no auto-reboot)
+  hosts: infra01
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    apt_env:
+      DEBIAN_FRONTEND: noninteractive
+    # Set to true if you want to automatically unhold any held packages
+    unhold_packages: false
+
+  pre_tasks:
+    - name: Ensure we can reach the host
+      ansible.builtin.ping:
+
+    - name: Show any held packages (informational)
+      ansible.builtin.command: apt-mark showhold
+      register: held_packages
+      changed_when: false
+      failed_when: false
+
+    - name: Print held packages if any
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }} held packages:
+          {{ (held_packages.stdout_lines | default([])) if (held_packages.stdout | default('') | length > 0) else 'none' }}
+      changed_when: false
+
+    - name: Optionally unhold packages
+      ansible.builtin.command: "apt-mark unhold {{ held_packages.stdout_lines | join(' ') }}"
+      when:
+        - unhold_packages | bool
+        - held_packages.stdout is defined
+        - held_packages.stdout | length > 0
+
+  tasks:
+    - name: Refresh apt cache + full upgrade (dist-upgrade)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+        upgrade: dist
+      environment: "{{ apt_env }}"
+
+    - name: Ensure kernel and firmware packages are current (Jammy HWE)
+      ansible.builtin.apt:
+        name:
+          - linux-generic-hwe-22.04
+          - linux-firmware
+        state: latest
+      environment: "{{ apt_env }}"
+
+    - name: Autoremove unused packages
+      ansible.builtin.apt:
+        autoremove: yes
+        purge: yes
+      environment: "{{ apt_env }}"
+
+    - name: Clean apt caches
+      ansible.builtin.apt:
+        autoclean: yes
+        clean: yes
+      environment: "{{ apt_env }}"
+
+    - name: Check if reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Print reboot required status (no reboot performed)
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: {{
+            'REBOOT REQUIRED (found /var/run/reboot-required) - reboot manually when ready.'
+            if reboot_required.stat.exists
+            else 'No reboot required.'
+          }}
+      changed_when: false
+
+    - name: Report kernel and OS version
+      ansible.builtin.shell: "echo Kernel=$(uname -r) OS=$(lsb_release -ds)"
+      register: system_report
+      changed_when: false
+
+    - name: Show report
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ system_report.stdout }}"
+      changed_when: false
