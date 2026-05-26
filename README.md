@@ -21,6 +21,7 @@ This repository is primarily designed for my own infrastructure, but it may be u
 
 ```
 homelab_ops/
+├── awtrix_clock/
 ├── collections/
 ├── pihole/
 │   └── update-pihole.yml
@@ -40,6 +41,14 @@ homelab_ops/
 ├── custom.config.yml
 └── README.md
 ```
+
+---
+
+## awtrix_clock/
+
+Version-controlled configuration for the Ulanzi TC001 pixel clock running AWTRIX 3, integrated with Home Assistant over MQTT.
+
+Contains the templated HA automations and scripts, the device `/api/settings` payload plus an apply-and-reboot script, and notes for the manual UI helpers and LaMetric icons. See `awtrix_clock/README.md` for the from-scratch setup sequence.
 
 ---
 

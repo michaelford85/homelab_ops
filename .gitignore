@@ -7,3 +7,8 @@ pihole/pihole_update_ansible.log
 custom.config.yml
 service_account.json
 ansible.log
+
+# AWTRIX clock - any local/unsanitized variants of the templated files
+awtrix_clock/**/*.local.yaml
+awtrix_clock/**/*.local.json
+awtrix_clock/**/*.local.sh
