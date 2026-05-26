@@ -1,5 +1,10 @@
 # awtrix_clock
 
+<p align="center">
+  <img src="./images/awtrix.gif" alt="Demo GIF">
+</p>
+
+
 Version-controlled configuration for the Ulanzi TC001 pixel clock running
 AWTRIX 3 firmware, integrated with Home Assistant over MQTT.
 
