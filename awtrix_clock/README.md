@@ -44,7 +44,7 @@ with secrets templated. Substitute these when copying back into a live
 |--------------------------|---------------------------|--------------------------------------|
 | `<MQTT_PREFIX>`          | `awtrix/kitchen`          | Clock MQTT settings (web UI)         |
 | `<MOBILE_NOTIFY_MICHAEL>`| `mobile_app_mf_iphone`    | HA mobile_app integration            |
-| `<MOBILE_NOTIFY_SARAH>`  | `mobile_app_sf_f7`        | HA mobile_app integration            |
+| `<MOBILE_NOTIFY_PARTNER>`| `mobile_app_sf_f7`        | HA mobile_app integration            |
 
 `<CLOCK_IP>` (default `10.0.30.168`) is not in any YAML file; it is passed
 to `device/apply_settings.sh` as an argument or `CLOCK_IP` env var.

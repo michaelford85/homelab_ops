@@ -9,7 +9,7 @@
 #                            (e.g. awtrix/kitchen)
 #   <MOBILE_NOTIFY_MICHAEL>  notify service name for Michael's phone
 #                            (e.g. mobile_app_mf_iphone)
-#   <MOBILE_NOTIFY_SARAH>    notify service name for Sarah's phone
+#   <MOBILE_NOTIFY_PARTNER>  notify service name for the second recipient's phone
 #                            (e.g. mobile_app_sf_f7)
 #
 # See ../README.md for the full placeholder reference.
@@ -91,12 +91,12 @@
         - conditions:
           - condition: state
             entity_id: input_select.kitchen_timer_notify
-            state: Sarah
+            state: Partner
           sequence:
           - data:
               title: Kitchen Timer
               message: Your timer is done!
-            action: notify.<MOBILE_NOTIFY_SARAH>
+            action: notify.<MOBILE_NOTIFY_PARTNER>
         default:
         - data:
             title: Kitchen Timer
@@ -105,7 +105,7 @@
         - data:
             title: Kitchen Timer
             message: Your timer is done!
-          action: notify.<MOBILE_NOTIFY_SARAH>
+          action: notify.<MOBILE_NOTIFY_PARTNER>
     default:
     - repeat:
         while:

@@ -10,7 +10,7 @@
 # ---------------------------------------------------------------------------
 # <MQTT_PREFIX>          awtrix/kitchen                     Clock MQTT settings
 # <MOBILE_NOTIFY_MICHAEL>  mobile_app_mf_iphone             HA mobile_app integration
-# <MOBILE_NOTIFY_SARAH>    mobile_app_sf_f7                 HA mobile_app integration
+# <MOBILE_NOTIFY_PARTNER>  mobile_app_sf_f7                 HA mobile_app integration
 # ---------------------------------------------------------------------------
 #
 # Dependencies (must already exist in HA):
@@ -100,12 +100,12 @@
         - conditions:
           - condition: state
             entity_id: input_select.kitchen_timer_notify
-            state: Sarah
+            state: Partner
           sequence:
           - data:
               title: Kitchen Timer
               message: Your timer is done!
-            action: notify.<MOBILE_NOTIFY_SARAH>
+            action: notify.<MOBILE_NOTIFY_PARTNER>
         default:
         - data:
             title: Kitchen Timer
@@ -114,7 +114,7 @@
         - data:
             title: Kitchen Timer
             message: Your timer is done!
-          action: notify.<MOBILE_NOTIFY_SARAH>
+          action: notify.<MOBILE_NOTIFY_PARTNER>
     default:
     - repeat:
         while:

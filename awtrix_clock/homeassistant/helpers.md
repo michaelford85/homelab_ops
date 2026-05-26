@@ -27,7 +27,7 @@ notification when `timer.kitchen_clock` finishes.
 |---------|-------|
 | Type    | Dropdown |
 | Name    | Kitchen Timer Notify |
-| Options | `Michael`, `Sarah`, `Both` |
+| Options | `Michael`, `Partner`, `Both` |
 
 The `awtrix_timer_display` automation reads this entity and routes to
 the matching mobile_app notify service. `Both` is the default branch
