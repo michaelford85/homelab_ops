@@ -1,0 +1,6 @@
+# Add to Home Assistant's configuration.yaml.
+# This is the timer entity backing the kitchen timer custom app on the clock.
+
+timer:
+  kitchen_clock:
+    name: Kitchen Clock Timer

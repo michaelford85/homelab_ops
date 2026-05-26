@@ -1,0 +1,146 @@
+# AWTRIX-related automations extracted from the live Home Assistant automations.yaml.
+#
+# This is a REFERENCE COPY, not a drop-in include. Live HA config is currently a
+# monolithic automations.yaml. To restore, copy these blocks into that file and
+# replace the placeholders below with the real values from your environment.
+#
+# Placeholders:
+#   <MQTT_PREFIX>            two-level MQTT topic prefix configured on the clock
+#                            (e.g. awtrix/kitchen)
+#   <MOBILE_NOTIFY_MICHAEL>  notify service name for Michael's phone
+#                            (e.g. mobile_app_mf_iphone)
+#   <MOBILE_NOTIFY_SARAH>    notify service name for Sarah's phone
+#                            (e.g. mobile_app_sf_f7)
+#
+# See ../README.md for the full placeholder reference.
+
+- id: awtrix_weather
+  alias: Awtrix Weather
+  triggers:
+  - entity_id: weather.forecast_home
+    trigger: state
+  - minutes: /2
+    trigger: time_pattern
+  actions:
+  - action: weather.get_forecasts
+    target:
+      entity_id: weather.forecast_home
+    data:
+      type: daily
+    response_variable: fc
+  - variables:
+      today: '{{ fc[''weather.forecast_home''].forecast[0] }}'
+      cur: '{{ states(''weather.forecast_home'') }}'
+      temp: '{{ state_attr(''weather.forecast_home'',''temperature'') | round(0) }}'
+      hum: '{{ state_attr(''weather.forecast_home'',''humidity'') }}'
+      hi: '{{ today.temperature | round(0) }}'
+      lo: '{{ today.templow | round(0) }}'
+      label: '{% set m = {''sunny'':''Sunny'',''clear-night'':''Clear'',''partlycloudy'':''Partly
+        Cloudy'', ''cloudy'':''Cloudy'',''rainy'':''Rain'',''pouring'':''Heavy Rain'',''snowy'':''Snow'',
+        ''fog'':''Fog'',''windy'':''Windy'',''lightning'':''Storm'',''lightning-rainy'':''Storm''}
+        %} {{ m.get(cur, cur | title) }}
+
+        '
+      icon: '{% set i = {''sunny'':11201,''clear-night'':12181,''partlycloudy'':53802,
+        ''cloudy'':53802,''rainy'':2284,''pouring'':2284,''snowy'':2289,''fog'':17055}
+        %} {{ i.get(cur, 2282) }}
+
+        '
+  - action: mqtt.publish
+    data:
+      topic: <MQTT_PREFIX>/custom/weather
+      payload: "{\"icon\": {{ icon }},\n \"text\": \"{{ label }} {{ temp }}° H{{ hi
+        }}° L{{ lo }}° {{ hum }}%\",\n \"duration\": 9}\n"
+  mode: single
+
+- id: awtrix_timer_display
+  alias: Awtrix Timer Display
+  triggers:
+  - trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.kitchen_clock
+  - trigger: state
+    entity_id: timer.kitchen_clock
+    to: active
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.event is defined and trigger.event.event_type
+          == ''timer.finished'' }}'
+      sequence:
+      - data:
+          topic: <MQTT_PREFIX>/notify
+          payload: '{"text":"TIME!","icon":2421,"color":[255,0,0],"duration":30,"sound":"alarm"}'
+        action: mqtt.publish
+      - data:
+          topic: <MQTT_PREFIX>/custom/timer
+          payload: ''
+        action: mqtt.publish
+      - choose:
+        - conditions:
+          - condition: state
+            entity_id: input_select.kitchen_timer_notify
+            state: Michael
+          sequence:
+          - data:
+              title: Kitchen Timer
+              message: Your timer is done!
+            action: notify.<MOBILE_NOTIFY_MICHAEL>
+        - conditions:
+          - condition: state
+            entity_id: input_select.kitchen_timer_notify
+            state: Sarah
+          sequence:
+          - data:
+              title: Kitchen Timer
+              message: Your timer is done!
+            action: notify.<MOBILE_NOTIFY_SARAH>
+        default:
+        - data:
+            title: Kitchen Timer
+            message: Your timer is done!
+          action: notify.<MOBILE_NOTIFY_MICHAEL>
+        - data:
+            title: Kitchen Timer
+            message: Your timer is done!
+          action: notify.<MOBILE_NOTIFY_SARAH>
+    default:
+    - repeat:
+        while:
+        - condition: state
+          entity_id: timer.kitchen_clock
+          state: active
+        sequence:
+        - data:
+            topic: <MQTT_PREFIX>/custom/timer
+            payload: '{% set f = state_attr(''timer.kitchen_clock'',''finishes_at'')
+              %} {% set rem = (as_datetime(f) - now()).total_seconds() | int %} {"icon":
+              2421, "text": "{{ ''%d:%02d'' % (rem // 60, rem % 60) }}"}
+
+              '
+          action: mqtt.publish
+        - delay: 00:00:03
+  mode: restart
+
+- id: '1779803181146'
+  alias: Awtrix Clock Faces
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    seconds: /10
+  actions:
+  - data:
+      topic: <MQTT_PREFIX>/custom/clock
+      payload: '{"text": "{{ now().strftime(''%-I:%M %p'') }}", "duration": 20}
+
+        '
+    action: mqtt.publish
+  - data:
+      topic: <MQTT_PREFIX>/custom/date
+      payload: '{"text": "{{ now().strftime(''%m/%d'') }}", "duration": 5}
+
+        '
+    action: mqtt.publish
+  mode: single

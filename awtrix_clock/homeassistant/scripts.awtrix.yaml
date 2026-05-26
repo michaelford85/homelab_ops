@@ -1,0 +1,22 @@
+# AWTRIX-related scripts. Merge into Home Assistant's scripts.yaml.
+
+# Core script: starts the kitchen timer for any number of minutes passed in.
+kitchen_timer:
+  alias: Kitchen Timer
+  fields:
+    minutes:
+      description: How many minutes to run the timer
+      example: 12
+  sequence:
+    - service: timer.start
+      target: {entity_id: timer.kitchen_clock}
+      data:
+        duration: "{{ '%02d:%02d:00' % (minutes | int // 60, minutes | int % 60) }}"
+
+# Start the timer using the value of the dashboard slider (input_number helper).
+kitchen_timer_from_slider:
+  alias: Kitchen Timer (from slider)
+  sequence:
+    - service: script.kitchen_timer
+      data:
+        minutes: "{{ states('input_number.kitchen_timer_minutes') | int }}"
