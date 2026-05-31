@@ -1,26 +1,32 @@
 # ============================================================================
-# AWTRIX automations - fully templated example
+# AWTRIX automations - fully templated example (three-clock setup)
 # ============================================================================
 #
 # Copy these blocks into Home Assistant's automations.yaml and replace every
 # placeholder below with the value for your environment.
 #
 # ---------------------------------------------------------------------------
-# Placeholder            Default for the kitchen unit       Where it lives
+# Per-room MQTT prefix (set once on each clock via its web UI -> MQTT).
+# Each physical clock MUST have a unique two-level prefix:
+#   awtrix/kitchen      kitchen unit
+#   awtrix/livingroom   living room unit
+#   awtrix/office       office unit
 # ---------------------------------------------------------------------------
-# <MQTT_PREFIX>          awtrix/kitchen                     Clock MQTT settings
-# <MOBILE_NOTIFY_MICHAEL>  mobile_app_mf_iphone             HA mobile_app integration
-# <MOBILE_NOTIFY_PARTNER>  mobile_app_sf_f7                 HA mobile_app integration
+# Placeholder        Example value   Where it lives
+#   <user_a_device>  phone_a         HA mobile_app integration (timer recipient A)
+#   <user_b_device>  phone_b         HA mobile_app integration (timer recipient B)
 # ---------------------------------------------------------------------------
 #
-# Dependencies (must already exist in HA):
-#   - weather.forecast_home  (Met.no or other weather integration)
-#   - timer.kitchen_clock    (defined in ../homeassistant/configuration.snippet.yaml)
-#   - input_select.kitchen_timer_notify (see ../homeassistant/helpers.md)
+# Entities that depend on your own integrations (rename to match yours):
+#   weather.forecast_home / weather.openweathermap   weather provider
+#   timer.kitchen_clock                  (../homeassistant/configuration.snippet.yaml)
+#   input_select.kitchen_timer_notify    (../homeassistant/helpers.md)
+#   binary_sensor.office_mmwave          office presence sensor
+#   sensor.pi_hole_ads_blocked / sensor.pi_hole2_ads_blocked
+#   sensor.yahoofinance_mdb / _gspc / _dji
 #
-# For a second clock, pick a unique two-level MQTT prefix
-# (e.g. awtrix/office) and duplicate this entire file with a different prefix.
-# See ../README.md "Adding a second clock" for details.
+# To add a fourth clock, pick a new unique prefix (e.g. awtrix/bedroom) and
+# duplicate the relevant blocks. See ../README.md for the full walkthrough.
 # ============================================================================
 
 - id: awtrix_weather
@@ -57,7 +63,7 @@
         '
   - action: mqtt.publish
     data:
-      topic: <MQTT_PREFIX>/custom/weather
+      topic: awtrix/kitchen/custom/weather
       payload: "{\"icon\": {{ icon }},\n \"text\": \"{{ label }} {{ temp }}° H{{ hi
         }}° L{{ lo }}° {{ hum }}%\",\n \"duration\": 9}\n"
   mode: single
@@ -80,41 +86,41 @@
           == ''timer.finished'' }}'
       sequence:
       - data:
-          topic: <MQTT_PREFIX>/notify
+          topic: awtrix/kitchen/notify
           payload: '{"text":"TIME!","icon":2421,"color":[255,0,0],"duration":30,"sound":"alarm"}'
         action: mqtt.publish
       - data:
-          topic: <MQTT_PREFIX>/custom/timer
+          topic: awtrix/kitchen/custom/timer
           payload: ''
         action: mqtt.publish
       - choose:
         - conditions:
           - condition: state
             entity_id: input_select.kitchen_timer_notify
-            state: Michael
+            state: User A
           sequence:
           - data:
               title: Kitchen Timer
               message: Your timer is done!
-            action: notify.<MOBILE_NOTIFY_MICHAEL>
+            action: notify.mobile_app_<user_a_device>
         - conditions:
           - condition: state
             entity_id: input_select.kitchen_timer_notify
-            state: Partner
+            state: User B
           sequence:
           - data:
               title: Kitchen Timer
               message: Your timer is done!
-            action: notify.<MOBILE_NOTIFY_PARTNER>
+            action: notify.mobile_app_<user_b_device>
         default:
         - data:
             title: Kitchen Timer
             message: Your timer is done!
-          action: notify.<MOBILE_NOTIFY_MICHAEL>
+          action: notify.mobile_app_<user_a_device>
         - data:
             title: Kitchen Timer
             message: Your timer is done!
-          action: notify.<MOBILE_NOTIFY_PARTNER>
+          action: notify.mobile_app_<user_b_device>
     default:
     - repeat:
         while:
@@ -123,7 +129,7 @@
           state: active
         sequence:
         - data:
-            topic: <MQTT_PREFIX>/custom/timer
+            topic: awtrix/kitchen/custom/timer
             payload: '{% set f = state_attr(''timer.kitchen_clock'',''finishes_at'')
               %} {% set rem = (as_datetime(f) - now()).total_seconds() | int %} {"icon":
               2421, "text": "{{ ''%d:%02d'' % (rem // 60, rem % 60) }}"}
@@ -141,15 +147,180 @@
     seconds: /10
   actions:
   - data:
-      topic: <MQTT_PREFIX>/custom/clock
+      topic: awtrix/kitchen/custom/clock
       payload: '{"text": "{{ now().strftime(''%-I:%M %p'') }}", "duration": 20}
 
         '
     action: mqtt.publish
   - data:
-      topic: <MQTT_PREFIX>/custom/date
+      topic: awtrix/kitchen/custom/date
       payload: '{"text": "{{ now().strftime(''%m/%d'') }}", "duration": 5}
 
         '
     action: mqtt.publish
+  mode: single
+
+- id: '1780071796632'
+  alias: Refresh OWM Weather Every 15 Minutes
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    minutes: /15
+  actions:
+  - action: homeassistant.update_entity
+    target:
+      entity_id: weather.openweathermap
+
+- id: '1780166876884'
+  alias: Awtrix Time Weather Combined
+  triggers:
+  - trigger: state
+    entity_id: weather.openweathermap
+  - trigger: time_pattern
+    seconds: /10
+  actions:
+  - action: weather.get_forecasts
+    target:
+      entity_id: weather.openweathermap
+    data:
+      type: daily
+    response_variable: fc
+  - variables:
+      temp: '{{ state_attr(''weather.openweathermap'',''temperature'') | round(0)
+        }}'
+      hour12: '{{ now().strftime(''%-I'') }}'
+      mins: '{{ now().strftime(''%M'') }}'
+      is_am: '{{ now().hour < 12 }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_am }}'
+      sequence:
+      - action: mqtt.publish
+        data:
+          topic: awtrix/livingroom/indicator1
+          payload: '{"color":"#FFFFFF"}'
+      - action: mqtt.publish
+        data:
+          topic: awtrix/livingroom/indicator3
+          payload: ''
+    - conditions:
+      - condition: template
+        value_template: '{{ not is_am }}'
+      sequence:
+      - action: mqtt.publish
+        data:
+          topic: awtrix/livingroom/indicator1
+          payload: ''
+      - action: mqtt.publish
+        data:
+          topic: awtrix/livingroom/indicator3
+          payload: '{"color":"#FFFFFF"}'
+  - action: mqtt.publish
+    data:
+      topic: awtrix/livingroom/custom/clockweather
+      payload: "{\"text\": \"{{ hour12 }}:{{ mins }} {{ temp }}F\",\n \"duration\":
+        15}\n"
+  mode: single
+
+- id: '1780169103847'
+  alias: Awtrix Office Combined
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id: weather.openweathermap
+  - trigger: time_pattern
+    seconds: /10
+  actions:
+  - variables:
+      temp: '{{ state_attr(''weather.openweathermap'',''temperature'') | round(0)
+        }}'
+      hour12: '{{ now().strftime(''%-I'') }}'
+      mins: '{{ now().strftime(''%M'') }}'
+  - action: mqtt.publish
+    data:
+      topic: awtrix/office/custom/clockweather
+      payload: "{\"text\": \"{{ hour12 }}:{{ mins }} {{ temp }}F\",\n \"duration\":
+        40}\n"
+  mode: single
+
+- id: '1780169374872'
+  alias: Awtrix Office Pihole Blocked
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    minutes: /5
+  actions:
+  - variables:
+      ph1: '{{ states(''sensor.pi_hole_ads_blocked'') | int(0) }}'
+      ph2: '{{ states(''sensor.pi_hole2_ads_blocked'') | int(0) }}'
+  - action: mqtt.publish
+    data:
+      topic: awtrix/office/custom/pihole
+      payload: "{\"icon\":\"7820\",\n \"text\":[\n   {\"t\":\"{{ ph1 }}\",\"c\":\"#FFAA00\"},\n
+        \  {\"t\":\"/\",\"c\":\"#FFFFFF\"},\n   {\"t\":\"{{ ph2 }}\",\"c\":\"#FFAA00\"}\n
+        ],\n \"duration\":8,\n\"scrollSpeed\":50}"
+  mode: single
+
+- id: '1780170986634'
+  alias: Awtrix Office Bright on Presence
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.office_mmwave
+    to: 'on'
+  actions:
+  - action: mqtt.publish
+    data:
+      topic: awtrix/office/settings
+      payload: '{"BRI":100,"ABRI":false}'
+  mode: single
+
+- id: '1780171077395'
+  alias: Awtrix Office Dim on Absence
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.office_mmwave
+    to: 'off'
+    for:
+      minutes: 2
+  actions:
+  - action: mqtt.publish
+    data:
+      topic: awtrix/office/settings
+      payload: '{"BRI":10,"ABRI":false}'
+  mode: single
+
+- id: '1780171943697'
+  alias: Awtrix Office Stocks
+  description: ''
+  triggers:
+  - trigger: time_pattern
+    minutes: /5
+  actions:
+  - variables:
+      mdb_price: '{{ states(''sensor.yahoofinance_mdb'') | float(0) | round(2) }}'
+      mdb_chg: '{{ state_attr(''sensor.yahoofinance_mdb'',''regularMarketChangePercent'')
+        | float(0) | round(1) }}'
+      spx_price: '{{ states(''sensor.yahoofinance_gspc'') | float(0) | round(0) |
+        int }}'
+      spx_chg: '{{ state_attr(''sensor.yahoofinance_gspc'',''regularMarketChangePercent'')
+        | float(0) | round(1) }}'
+      dji_price: '{{ states(''sensor.yahoofinance_dji'') | float(0) | round(0) | int
+        }}'
+      dji_chg: '{{ state_attr(''sensor.yahoofinance_dji'',''regularMarketChangePercent'')
+        | float(0) | round(1) }}'
+      mdb_color: '{{ ''#00FF00'' if mdb_chg >= 0 else ''#FF0000'' }}'
+      spx_color: '{{ ''#00FF00'' if spx_chg >= 0 else ''#FF0000'' }}'
+      dji_color: '{{ ''#00FF00'' if dji_chg >= 0 else ''#FF0000'' }}'
+  - action: mqtt.publish
+    data:
+      topic: awtrix/office/custom/stocks
+      payload: "{\"text\":[\n  {\"t\":\"S&P 500 \",\"c\":\"#FFFFFF\"},\n  {\"t\":\"{{
+        spx_price }} ({{ spx_chg }}%) \",\"c\":\"{{ spx_color }}\"},\n  {\"t\":\"DJI
+        \",\"c\":\"#FFFFFF\"},\n  {\"t\":\"{{ dji_price }} ({{ dji_chg }}%)\",\"c\":\"{{
+        dji_color }}\"},\n  {\"t\":\" MDB \",\"c\":\"#FFFFFF\"},\n  {\"t\":\"{{ mdb_price
+        }} ({{ mdb_chg }}%) \",\"c\":\"{{ mdb_color }}\"}\n ],\n \"duration\":13,\n
+        \"scrollSpeed\":70}\n"
   mode: single

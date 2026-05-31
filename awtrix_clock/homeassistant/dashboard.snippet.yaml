@@ -1,0 +1,37 @@
+# Kitchen timer dashboard card.
+#
+# Paste into a Lovelace dashboard (Edit dashboard -> raw config, or "Add card
+# -> Manual"). Drives the kitchen clock's timer via the slider and dropdown
+# helpers in helpers.md and the kitchen_timer_from_slider script.
+#
+# Entities referenced (all must already exist):
+#   input_number.kitchen_timer_minutes   (helper, see helpers.md)
+#   input_select.kitchen_timer_notify    (helper, see helpers.md)
+#   timer.kitchen_clock                  (configuration.snippet.yaml)
+#   script.kitchen_timer_from_slider     (scripts.awtrix.yaml)
+
+type: vertical-stack
+title: Kitchen Timer
+cards:
+  - type: entities
+    entities:
+      - entity: input_number.kitchen_timer_minutes
+        name: Minutes
+      - entity: input_select.kitchen_timer_notify
+        name: Notify
+      - entity: timer.kitchen_clock
+        name: Timer
+  - type: button
+    name: Start Timer
+    icon: mdi:timer-play
+    tap_action:
+      action: call-service
+      service: script.kitchen_timer_from_slider
+  - type: button
+    name: Cancel Timer
+    icon: mdi:timer-off
+    tap_action:
+      action: call-service
+      service: timer.cancel
+      target:
+        entity_id: timer.kitchen_clock

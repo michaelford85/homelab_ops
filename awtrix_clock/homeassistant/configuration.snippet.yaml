@@ -1,6 +1,18 @@
 # Add to Home Assistant's configuration.yaml.
-# This is the timer entity backing the kitchen timer custom app on the clock.
 
+# timer entity backing the kitchen timer custom app on the kitchen clock.
 timer:
   kitchen_clock:
     name: Kitchen Clock Timer
+
+# Stock quotes for the office clock's "Awtrix Office Stocks" automation.
+# Requires the yahoofinance custom integration (HACS). The automation reads
+# sensor.yahoofinance_mdb / _gspc / _dji; change the symbols to suit yourself.
+yahoofinance:
+  symbols:
+    - MDB
+    - ^GSPC
+    - ^DJI
+  scan_interval:
+    hours: 0
+    minutes: 15
