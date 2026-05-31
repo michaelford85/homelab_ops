@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./apply_settings.sh <CLOCK_IP>
-#   CLOCK_IP=10.0.30.168 ./apply_settings.sh
+#   CLOCK_IP=192.168.1.50 ./apply_settings.sh
 
 set -euo pipefail
 
@@ -28,6 +28,9 @@ curl -fsS -X POST -H "Content-Type: application/json" \
   --data-binary "@${SETTINGS_FILE}" \
   "http://${CLOCK_IP}/api/settings"
 echo
+
+# Give the firmware a moment to persist settings before rebooting.
+sleep 2
 
 echo "Rebooting clock at http://${CLOCK_IP}/api/reboot ..."
 curl -fsS "http://${CLOCK_IP}/api/reboot" || true

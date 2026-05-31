@@ -46,9 +46,9 @@ homelab_ops/
 
 ## awtrix_clock/
 
-Version-controlled configuration for the Ulanzi TC001 pixel clock running AWTRIX 3, integrated with Home Assistant over MQTT.
+Version-controlled configuration for three Ulanzi TC001 pixel clocks (kitchen, living room, office) running AWTRIX 3, integrated with Home Assistant over MQTT.
 
-Contains the templated HA automations and scripts, the device `/api/settings` payload plus an apply-and-reboot script, and notes for the manual UI helpers and LaMetric icons. See `awtrix_clock/README.md` for the from-scratch setup sequence.
+Contains the templated HA automations and scripts, the device `/api/settings` payload plus an apply-and-reboot script, a Lovelace timer card, and notes for the manual UI helpers and LaMetric icons. See `awtrix_clock/README.md` for the from-scratch setup sequence and per-room MQTT prefix convention.
 
 ---
 
